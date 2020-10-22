@@ -40,7 +40,17 @@ function dataItemLayout(predicate, object, indent) {
  */
 function markupLevel(store, id, indent) {
     const dataItems = [];
-    const levelQuads = store.getQuads(id, undefined, undefined);
+    let levelQuads = store.getQuads(id, undefined, undefined);
+
+    // important properties (type & name) go first
+    const typeQuad = store.getQuads(id, 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type', undefined);
+    const nameQuad = store.getQuads(id, 'http://schema.org/name', undefined);
+    levelQuads = levelQuads.filter(x => x.predicate.value !== 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type' &&
+        x.predicate.value !== 'http://schema.org/name');
+    levelQuads.push(...nameQuad);
+    levelQuads.push(...typeQuad);
+    levelQuads.reverse();
+
     for (const quad of levelQuads) {
         dataItems.push(dataItemLayout(quad.predicate, quad.object, indent));
         dataItems.push(...markupLevel(store, quad.object, indent + 1));
