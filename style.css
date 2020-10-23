@@ -3,16 +3,11 @@ body, html {
     font: 14px "Roboto", Helvetica, Arial, sans-serif;
 }
 
-.data-item {
+.triple-row {
     display: flex;
     border-bottom: lightgrey 0.3px solid;
     padding: 5px 10px;
-}
-
-.info {
-    display: flex;
     justify-content: space-between;
-    flex-grow: 1;
 }
 
 .predicate {

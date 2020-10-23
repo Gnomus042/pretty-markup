@@ -1,3 +1,7 @@
+const TYPE_URI = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type';
+const NAME_URI = 'http://schema.org/name';
+const indentStep = 30;
+
 /**
  * @param {string} text
  * @return {string}
@@ -10,77 +14,104 @@ function removeUrls(text) {
  * Makes an html layout for a single triple
  * @param predicate
  * @param object
- * @param {number} indent - used for making padding for nested structures
- * @return {string}
+ * @param {{
+ *     indentLevel: number,
+ *     entityColorId: number,
+ *     isTarget: boolean
+ * }} options
+ * @return {*}
  */
-function dataItemLayout(predicate, object, indent, color) {
-    let trueIndent = indent * 30;
-    // removing prefix urls from the predicate (looks better and simpler)
-    let predicateStr = removeUrls(predicate.value);
-    let objectStr = object.termType === 'NamedNode' ? removeUrls(object.value) : object.value;
+function dataItemLayout(predicate, object, options) {
+    const indentBlock = document.createElement('div');
+    indentBlock.style.width = `${options.indentLevel * indentStep}px`;
+    indentBlock.style.borderRight = `3px solid hsl(${options.entityColorId}, 60%, 70%)`;
+    indentBlock.style.marginRight = '3px';
 
-    // temporary hack for hiding blank nodes
-    let blankNodeHack = '';
-    if (object.termType === 'BlankNode') {
-        blankNodeHack = 'style="display: none"';
-    }
-    return `<div class="data-item">
-        <div class="info">
-            <div class="predicate"><div style='width: ${trueIndent}px; border-right:3px solid ${color}; margin-right: 3px'></div><div>${predicateStr}</div></div>
-            <div class="object" ${blankNodeHack}>${objectStr}</div>
-        </div>
-    </div>`;
+    const predicateEl = document.createElement('div');
+    predicateEl.classList.add('predicate');
+    const predicateTextEl = document.createElement('div');
+    predicateTextEl.innerText = removeUrls(predicate.value);
+    predicateEl.appendChild(indentBlock);
+    predicateEl.appendChild(predicateTextEl);
+
+    const objectEl = document.createElement('div');
+    objectEl.classList.add('object');
+    objectEl.innerText = object.termType === 'NamedNode' ? removeUrls(object.value) : object.value;
+    if (object.termType === 'BlankNode')
+        objectEl.style.display = 'none';
+
+    const tripleRow = document.createElement('div');
+    tripleRow.classList.add('triple-row');
+    tripleRow.style.background = options.isTarget ? '#f4f4f4' : '#fff';
+    tripleRow.appendChild(predicateEl);
+    tripleRow.appendChild(objectEl);
+
+    return tripleRow;
 }
 
 /**
  * Recursive level-based html generation
  * @param store - n3 store with quads
  * @param {string} id - current node identifier
- * @param {number} indent - current indentation level
- * @return {string[]}
+ * @param {number} indentLevel - current indentation level
+ * @param {{type: 'entity'|'property', uri: string}} target - used for highlighting target entities/properties, e.g.
+ *      startDate in the Event entity
+ * @return {HTMLElement[]}
  */
-function markupLevel(store, id, indent) {
-    const dataItems = [];
+function markupLevel(store, id, indentLevel, target) {
+    const tripleRows = [];
     let levelQuads = store.getQuads(id, undefined, undefined);
-    const color = `hsl(${Math.random()*360}, 60%, 70%)`;
+    // color identifier for current entity
+    const colorId = Math.random() * 360;
 
     // important properties (type & name) go first
-    const typeQuad = store.getQuads(id, 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type', undefined);
-    const nameQuad = store.getQuads(id, 'http://schema.org/name', undefined);
-    levelQuads = levelQuads.filter(x => x.predicate.value !== 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type' &&
-        x.predicate.value !== 'http://schema.org/name');
+    const typeQuad = store.getQuads(id, TYPE_URI, undefined);
+    const nameQuad = store.getQuads(id, NAME_URI, undefined);
+    levelQuads = levelQuads.filter(x => x.predicate.value !== TYPE_URI && x.predicate.value !== NAME_URI);
     levelQuads.push(...nameQuad);
     levelQuads.push(...typeQuad);
     levelQuads.reverse();
 
     for (const quad of levelQuads) {
-        dataItems.push(dataItemLayout(quad.predicate, quad.object, indent, color));
-        dataItems.push(...markupLevel(store, quad.object, indent + 1));
+        // used for highlighting target triples
+        let isTarget = target.type === 'entity' && typeQuad.length > 0 && typeQuad[0].object.value === target.uri ||
+            target.type === 'property' && quad.predicate.value === target.uri;
+        tripleRows.push(dataItemLayout(quad.predicate, quad.object, {
+            indentLevel: indentLevel,
+            entityColorId: colorId,
+            isTarget: isTarget,
+        }));
+        tripleRows.push(...markupLevel(store, quad.object, indentLevel + 1, target));
     }
-    return dataItems;
+    return tripleRows;
 }
 
 /**
  * Base function that will can be called for pretty markup generation
- * @param {data} markup
- * @param {string} baseIRI
- * @return {Promise<string>}
+ * @param {string} data - json-ld markup
+ * @param {string} baseIRI - needed for parsing
+ * @param {{type: 'entity'|'property', uri: string}} target - used for highlighting target entities/properties, e.g.
+ *      startDate in the Event entity
+ * @return {Promise<HTMLElement[]>}
  */
-async function prettyMarkupHtml(data, baseIRI) {
+async function prettyMarkupHtml(data, baseIRI, target) {
     const store = await schemarama.inputToQuads(data, baseIRI);
-    return markupLevel(store, baseIRI, 0).join('');
+    return markupLevel(store, baseIRI, 0, target);
 }
 
 /**
  * Hypothetical function that can be called every time we need to display the pretty markup
- * @param data
- * @param baseIRI
+ * (target property is http://schema.org/startDate)
+ * @param {string} data - jsonld markup
+ * @param {string} baseIRI - needed for parsing
  * @return {Promise<void>}
  */
 async function prettyMarkup(data, baseIRI) {
     const prettyMarkupDiv = document.getElementById('pretty-markup');
-    const html = await prettyMarkupHtml(data, baseIRI);
-    prettyMarkupDiv.insertAdjacentHTML('beforeend', html);
+    const elements = await prettyMarkupHtml(data, baseIRI, {type: 'property', uri: 'http://schema.org/startDate'});
+    for (const el of elements) {
+        prettyMarkupDiv.appendChild(el);
+    }
 }
 
 const data = `
@@ -106,5 +137,5 @@ const data = `
   "url": "nba-miami-philidelphia-game3.html"
 }
 `;
-prettyMarkup(data, 'https://schema.org/Event');
+prettyMarkup(data, 'https://example.org/example');
 
