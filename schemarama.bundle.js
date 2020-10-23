@@ -9536,8 +9536,6 @@ exports.RDFA_CONTENTTYPES = {
     'image/svg+xml': 'xml',
 };
 // tslint:enable:object-literal-sort-keys
-//# sourceMappingURL=RdfaProfile.js.map
-
 /***/ }),
 /* 42 */
 /***/ (function(module, exports, __webpack_require__) {
@@ -9559,8 +9557,6 @@ class NamedNode {
     }
 }
 exports.NamedNode = NamedNode;
-//# sourceMappingURL=NamedNode.js.map
-
 /***/ }),
 /* 43 */
 /***/ (function(module, exports, __webpack_require__) {
@@ -21471,8 +21467,6 @@ Util.TIME_REGEXES = [
     { regex: /^[0-9]+$/, type: 'gYear' },
 ];
 Util.IRI_REGEX = /^([A-Za-z][A-Za-z0-9+-.]*|_):[^ "<>{}|\\\[\]`]*$/;
-//# sourceMappingURL=Util.js.map
-
 /***/ }),
 /* 82 */
 /***/ (function(module, exports, __webpack_require__) {
@@ -21494,8 +21488,6 @@ class BlankNode {
     }
 }
 exports.BlankNode = BlankNode;
-//# sourceMappingURL=BlankNode.js.map
-
 /***/ }),
 /* 83 */
 /***/ (function(module, exports, __webpack_require__) {
@@ -21520,8 +21512,6 @@ class DefaultGraph {
 }
 exports.DefaultGraph = DefaultGraph;
 DefaultGraph.INSTANCE = new DefaultGraph();
-//# sourceMappingURL=DefaultGraph.js.map
-
 /***/ }),
 /* 84 */
 /***/ (function(module, exports, __webpack_require__) {
@@ -21559,8 +21549,6 @@ class Literal {
 exports.Literal = Literal;
 Literal.RDF_LANGUAGE_STRING = new NamedNode_1.NamedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#langString');
 Literal.XSD_STRING = new NamedNode_1.NamedNode('http://www.w3.org/2001/XMLSchema#string');
-//# sourceMappingURL=Literal.js.map
-
 /***/ }),
 /* 85 */
 /***/ (function(module, exports, __webpack_require__) {
@@ -21592,8 +21580,6 @@ class Quad {
     }
 }
 exports.Quad = Quad;
-//# sourceMappingURL=Quad.js.map
-
 /***/ }),
 /* 86 */
 /***/ (function(module, exports, __webpack_require__) {
@@ -21615,8 +21601,6 @@ class Variable {
     }
 }
 exports.Variable = Variable;
-//# sourceMappingURL=Variable.js.map
-
 /***/ }),
 /* 87 */
 /***/ (function(module, exports) {
@@ -31188,8 +31172,6 @@ __exportStar(__webpack_require__(158), exports);
 __exportStar(__webpack_require__(159), exports);
 __exportStar(__webpack_require__(41), exports);
 __exportStar(__webpack_require__(81), exports);
-//# sourceMappingURL=index.js.map
-
 /***/ }),
 /* 156 */
 /***/ (function(module, exports, __webpack_require__) {
@@ -31197,8 +31179,6 @@ __exportStar(__webpack_require__(81), exports);
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-//# sourceMappingURL=IActiveTag.js.map
-
 /***/ }),
 /* 157 */
 /***/ (function(module, exports, __webpack_require__) {
@@ -31206,8 +31186,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-//# sourceMappingURL=IHtmlParseListener.js.map
-
 /***/ }),
 /* 158 */
 /***/ (function(module, exports, __webpack_require__) {
@@ -31215,8 +31193,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-//# sourceMappingURL=IRdfaPattern.js.map
-
 /***/ }),
 /* 159 */
 /***/ (function(module, exports, __webpack_require__) {
@@ -32013,8 +31989,6 @@ class RdfaParser extends stream_1.Transform {
     }
 }
 exports.RdfaParser = RdfaParser;
-//# sourceMappingURL=RdfaParser.js.map
-
 /***/ }),
 /* 160 */
 /***/ (function(module, exports, __webpack_require__) {
@@ -33065,8 +33039,6 @@ function __export(m) {
 }
 Object.defineProperty(exports, "__esModule", { value: true });
 __export(__webpack_require__(173));
-//# sourceMappingURL=index.js.map
-
 /***/ }),
 /* 173 */
 /***/ (function(module, exports, __webpack_require__) {
@@ -33290,8 +33262,6 @@ exports.removeDotSegmentsOfPath = removeDotSegmentsOfPath;
 function isCharacterAllowedAfterRelativePathSegment(character) {
     return !character || character === '#' || character === '?' || character === '/';
 }
-//# sourceMappingURL=Resolve.js.map
-
 /***/ }),
 /* 174 */
 /***/ (function(module, exports, __webpack_require__) {
@@ -33316,8 +33286,6 @@ __exportStar(__webpack_require__(84), exports);
 __exportStar(__webpack_require__(42), exports);
 __exportStar(__webpack_require__(85), exports);
 __exportStar(__webpack_require__(86), exports);
-//# sourceMappingURL=index.js.map
-
 /***/ }),
 /* 175 */
 /***/ (function(module, exports, __webpack_require__) {
@@ -33444,8 +33412,6 @@ class DataFactory {
     }
 }
 exports.DataFactory = DataFactory;
-//# sourceMappingURL=DataFactory.js.map
-
 /***/ }),
 /* 176 */
 /***/ (function(module, exports, __webpack_require__) {
