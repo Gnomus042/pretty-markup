@@ -13,20 +13,21 @@ function removeUrls(text) {
  * @param {number} indent - used for making padding for nested structures
  * @return {string}
  */
-function dataItemLayout(predicate, object, indent) {
+function dataItemLayout(predicate, object, indent, color) {
     let trueIndent = indent * 30;
     // removing prefix urls from the predicate (looks better and simpler)
-    predicate = removeUrls(predicate.value);
+    let predicateStr = removeUrls(predicate.value);
+    let objectStr = object.termType === 'NamedNode' ? removeUrls(object.value) : object.value;
 
     // temporary hack for hiding blank nodes
     let blankNodeHack = '';
-    if (object.id && object.id.match(/_:*/)) {
+    if (object.termType === 'BlankNode') {
         blankNodeHack = 'style="display: none"';
     }
     return `<div class="data-item">
         <div class="info">
-            <div class="predicate"><div style='width: ${trueIndent}px'></div><div>${predicate}</div></div>
-            <div class="object" ${blankNodeHack}>${object.value}</div>
+            <div class="predicate"><div style='width: ${trueIndent}px; border-right:3px solid ${color}; margin-right: 3px'></div><div>${predicateStr}</div></div>
+            <div class="object" ${blankNodeHack}>${objectStr}</div>
         </div>
     </div>`;
 }
@@ -41,6 +42,7 @@ function dataItemLayout(predicate, object, indent) {
 function markupLevel(store, id, indent) {
     const dataItems = [];
     let levelQuads = store.getQuads(id, undefined, undefined);
+    const color = `hsl(${Math.random()*360}, 60%, 70%)`;
 
     // important properties (type & name) go first
     const typeQuad = store.getQuads(id, 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type', undefined);
@@ -52,7 +54,7 @@ function markupLevel(store, id, indent) {
     levelQuads.reverse();
 
     for (const quad of levelQuads) {
-        dataItems.push(dataItemLayout(quad.predicate, quad.object, indent));
+        dataItems.push(dataItemLayout(quad.predicate, quad.object, indent, color));
         dataItems.push(...markupLevel(store, quad.object, indent + 1));
     }
     return dataItems;
