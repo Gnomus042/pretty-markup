@@ -6,8 +6,11 @@ const indentStep = 30;
  * @param {string} text
  * @return {string}
  */
-function removeUrls(text) {
-    return text.replaceAll(/https?:\/\/[^\s]+[\/#]/g, '');
+function replacePrefix(text) {
+    text = text.replaceAll(/https?:\/\/schema.org\//g, '');
+    text = text.replaceAll(/http:\/\/www.w3.org\/1999\/02\/22-rdf-syntax-ns#/g, '')
+    text = text.replaceAll(/http:\/\/www.w3.org\/2000\/01\/rdf-schema#/g, '');
+    return text;
 }
 
 /**
@@ -30,13 +33,13 @@ function dataItemLayout(predicate, object, options) {
     const predicateEl = document.createElement('div');
     predicateEl.classList.add('predicate');
     const predicateTextEl = document.createElement('div');
-    predicateTextEl.innerText = removeUrls(predicate.value);
+    predicateTextEl.innerText = replacePrefix(predicate.value);
     predicateEl.appendChild(indentBlock);
     predicateEl.appendChild(predicateTextEl);
 
     const objectEl = document.createElement('div');
     objectEl.classList.add('object');
-    objectEl.innerText = object.termType === 'NamedNode' ? removeUrls(object.value) : object.value;
+    objectEl.innerText = object.termType === 'NamedNode' ? replacePrefix(object.value) : object.value;
     if (object.termType === 'BlankNode')
         objectEl.style.display = 'none';
 
@@ -58,9 +61,11 @@ function dataItemLayout(predicate, object, options) {
  *      startDate in the Event entity
  * @return {HTMLElement[]}
  */
-function markupLevel(store, id, indentLevel, target) {
-    const tripleRows = [];
+function markupLevel(store, id, displayed, indentLevel, target) {
+    if (displayed.includes(id)) return []
+    displayed.push(id);
     let levelQuads = store.getQuads(id, undefined, undefined);
+    const tripleRows = [];
     // color identifier for current entity
     const colorId = Math.random() * 360;
 
@@ -81,7 +86,7 @@ function markupLevel(store, id, indentLevel, target) {
             entityColorId: colorId,
             isTarget: isTarget,
         }));
-        tripleRows.push(...markupLevel(store, quad.object, indentLevel + 1, target));
+        tripleRows.push(...markupLevel(store, quad.object.id, displayed, indentLevel + 1, target));
     }
     return tripleRows;
 }
@@ -89,26 +94,41 @@ function markupLevel(store, id, indentLevel, target) {
 /**
  * Base function that will can be called for pretty markup generation
  * @param {string} data - json-ld markup
- * @param {string} baseIRI - needed for parsing
  * @param {{type: 'entity'|'property', uri: string}} target - used for highlighting target entities/properties, e.g.
  *      startDate in the Event entity
  * @return {Promise<HTMLElement[]>}
  */
-async function prettyMarkupHtml(data, baseIRI, target) {
-    const store = await schemarama.inputToQuads(data, baseIRI);
-    return markupLevel(store, baseIRI, 0, target);
+async function prettyMarkupHtml(data, target) {
+    try {
+        JSON.parse(data);
+    } catch (e) {
+        let domParser = new DOMParser();
+        let jsonld = [].slice.call(domParser.parseFromString(data, 'text/html')
+            .getElementsByTagName('script'))
+            .filter(x => x.type === 'application/ld+json');
+        // if there is exactly one json-ld, then parse it, else throw an exception
+        // (I assume that only one json-ld can be in the example, but if not we still can
+        // parse and display more than one)
+        if (jsonld.length === 1) data = jsonld[0].innerText;
+        else if (jsonld.length > 1) throw 'not single json-ld in the example';
+    }
+    const shapes = schemarama.quadsToShapes(await schemarama.inputToQuads(data));
+    const tripleRows = [];
+    for (const [id, shape] of shapes.entries()) {
+        tripleRows.push(...markupLevel(shape, id, [],0, target));
+    }
+    return tripleRows;
 }
 
 /**
  * Hypothetical function that can be called every time we need to display the pretty markup
  * (target property is http://schema.org/startDate)
  * @param {string} data - jsonld markup
- * @param {string} baseIRI - needed for parsing
  * @return {Promise<void>}
  */
-async function prettyMarkup(data, baseIRI) {
+async function prettyMarkup(data) {
     const prettyMarkupDiv = document.getElementById('pretty-markup');
-    const elements = await prettyMarkupHtml(data, baseIRI, {type: 'property', uri: 'http://schema.org/startDate'});
+    const elements = await prettyMarkupHtml(data, {type: 'property', uri: 'http://schema.org/startDate'});
     for (const el of elements) {
         prettyMarkupDiv.appendChild(el);
     }
@@ -137,5 +157,5 @@ const data = `
   "url": "nba-miami-philidelphia-game3.html"
 }
 `;
-prettyMarkup(data, 'https://example.org/example');
+prettyMarkup(data);
 
