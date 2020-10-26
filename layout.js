@@ -56,12 +56,13 @@ function dataItemLayout(predicate, object, options) {
  * Recursive level-based html generation
  * @param store - n3 store with quads
  * @param {string} id - current node identifier
+ * @param {string[]} displayed
  * @param {number} indentLevel - current indentation level
- * @param {{type: 'entity'|'property', uri: string}} target - used for highlighting target entities/properties, e.g.
+ * @param {{type: 'entity'|'property', uri: string}|undefined} target - used for highlighting target entities/properties, e.g.
  *      startDate in the Event entity
  * @return {HTMLElement[]}
  */
-function markupLevel(store, id, displayed, indentLevel, target) {
+function markupLevel(store, id, displayed, indentLevel, target=undefined) {
     if (displayed.includes(id)) return []
     displayed.push(id);
     let levelQuads = store.getQuads(id, undefined, undefined);
@@ -79,8 +80,8 @@ function markupLevel(store, id, displayed, indentLevel, target) {
 
     for (const quad of levelQuads) {
         // used for highlighting target triples
-        let isTarget = target.type === 'entity' && typeQuad.length > 0 && typeQuad[0].object.value === target.uri ||
-            target.type === 'property' && quad.predicate.value === target.uri;
+        let isTarget = target && (target.type === 'entity' && typeQuad.length > 0 && typeQuad[0].object.value === target.uri ||
+            target.type === 'property' && quad.predicate.value === target.uri);
         tripleRows.push(dataItemLayout(quad.predicate, quad.object, {
             indentLevel: indentLevel,
             entityColorId: colorId,
@@ -94,11 +95,11 @@ function markupLevel(store, id, displayed, indentLevel, target) {
 /**
  * Base function that will can be called for pretty markup generation
  * @param {string} data - json-ld markup
- * @param {{type: 'entity'|'property', uri: string}} target - used for highlighting target entities/properties, e.g.
+ * @param {{type: 'entity'|'property', uri: string}|undefined} target - used for highlighting target entities/properties, e.g.
  *      startDate in the Event entity
  * @return {Promise<HTMLElement[]>}
  */
-async function prettyMarkupHtml(data, target) {
+async function prettyMarkupHtml(data, target=undefined) {
     try {
         JSON.parse(data);
     } catch (e) {
@@ -122,13 +123,12 @@ async function prettyMarkupHtml(data, target) {
 
 /**
  * Hypothetical function that can be called every time we need to display the pretty markup
- * (target property is http://schema.org/startDate)
  * @param {string} data - jsonld markup
  * @return {Promise<void>}
  */
 async function prettyMarkup(data) {
     const prettyMarkupDiv = document.getElementById('pretty-markup');
-    const elements = await prettyMarkupHtml(data, {type: 'property', uri: 'http://schema.org/startDate'});
+    const elements = await prettyMarkupHtml(data);
     for (const el of elements) {
         prettyMarkupDiv.appendChild(el);
     }
