@@ -62,7 +62,7 @@ function dataItemLayout(predicate, object, options) {
  *      startDate in the Event entity
  * @return {HTMLElement[]}
  */
-function markupLevel(store, id, displayed, indentLevel, target=undefined) {
+function markupLevel(store, id, displayed, indentLevel, target = undefined) {
     if (displayed.includes(id)) return []
     displayed.push(id);
     let levelQuads = store.getQuads(id, undefined, undefined);
@@ -99,7 +99,7 @@ function markupLevel(store, id, displayed, indentLevel, target=undefined) {
  *      startDate in the Event entity
  * @return {Promise<HTMLElement[]>}
  */
-async function prettyMarkupHtml(data, target=undefined) {
+async function prettyMarkupHtml(data, target = undefined) {
     try {
         JSON.parse(data);
     } catch (e) {
@@ -116,7 +116,7 @@ async function prettyMarkupHtml(data, target=undefined) {
     const shapes = schemarama.quadsToShapes(await schemarama.inputToQuads(data));
     const tripleRows = [];
     for (const [id, shape] of shapes.entries()) {
-        tripleRows.push(...markupLevel(shape, id, [],0, target));
+        tripleRows.push(...markupLevel(shape, id, [], 0, target));
     }
     return tripleRows;
 }
@@ -136,25 +136,25 @@ async function prettyMarkup(data) {
 
 const data = `
 {
-  "@context": "https://schema.org",
-  "@type": "Event",
-  "name": "Miami Heat at Philadelphia 76ers - Game 3 (Home Game 1)",
-  "location": {
-    "@type": "Place",
-    "address": {
-      "@type": "PostalAddress",
-      "addressLocality": "Philadelphia",
-      "addressRegion": "PA"
-    },
-    "url": "wells-fargo-center.html"
-  },
-  "offers": {
-    "@type": "AggregateOffer",
-    "lowPrice": "$35",
-    "offerCount": "1938"
-  },
-  "startDate": "2016-04-21T20:00",
-  "url": "nba-miami-philidelphia-game3.html"
+  "@context":  "https://schema.org/",
+  "@id": "#record",
+  "@type": "Book",
+  "additionalType": "Product",
+  "name": "Le concerto",
+  "author": "Ferchault, Guy",
+  "offers":{
+      "@type": "Offer",
+      "availability": "https://schema.org/InStock",
+      "serialNumber": "CONC91000937",
+      "sku": "780 R2",
+      "offeredBy": {
+          "@type": "Library",
+          "@id": "http://library.anytown.gov.uk",
+          "name": "Anytown City Library"
+      },
+      "businessFunction": "http://purl.org/goodrelations/v1#LeaseOut",
+      "itemOffered": "#record"
+    }
 }
 `;
 prettyMarkup(data);
