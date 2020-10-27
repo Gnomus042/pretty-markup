@@ -5954,25 +5954,28 @@ const errors = __webpack_require__(162);
 /**
  * Parses json-ld to quads into the n3.Store
  * @param {string} text input data
+ * @param {string} baseUrl
  * @return {Store}
  */
-async function parseJsonLd(text) {
+async function parseJsonLd(text, baseUrl) {
     let data = JSON.parse(text);
+    data['@id'] = baseUrl;
     const nquads = await jsonld.toRDF(data, { format: 'application/n-quads' });
-    return parseNQuads(nquads);
+    return parseNQuads(nquads, baseUrl);
 }
 
 
 /**
  * Parse RDFa to quads into the n3.Store
  * @param {string} text input data
+ * @param {string} baseUrl
  * @return {Promise<Store>}
  */
-async function parseRdfa(text) {
+async function parseRdfa(text, baseUrl) {
     const textStream = streamify(text);
     return new Promise((res, rej) => {
         let store = new Store();
-        const rdfaParser = new RdfaParser({contentType: 'text/html'});
+        const rdfaParser = new RdfaParser({baseIRI: baseUrl, contentType: 'text/html'});
         textStream.pipe(rdfaParser)
             .on('data', quad => {
                 store.addQuad(quad);
@@ -5986,13 +5989,14 @@ async function parseRdfa(text) {
 /**
  * Parses microdata to quads into the n3.Store
  * @param {string} text
+ * @param {string} baseUrl
  * @return {Promise<Store>}
  */
-async function parseMicrodata(text) {
+async function parseMicrodata(text, baseUrl) {
     const textStream = streamify(text);
     return new Promise((res, rej) => {
         let store = new Store();
-        const rdfaParser = new MicrodataParser();
+        const rdfaParser = new MicrodataParser({baseIRI: baseUrl});
         textStream.pipe(rdfaParser)
             .on('data', quad => {
                 store.addQuad(quad);
@@ -6005,11 +6009,13 @@ async function parseMicrodata(text) {
 
 /**
  *  @param {string} text
+ *  @param {string} baseUrl
  *  @return {Store}
  */
-function parseNQuads(text) {
+function parseNQuads(text, baseUrl) {
     const turtleParser = new n3.Parser({
-        format: "application/n-quads"
+        format: "application/n-quads",
+        baseIRI: baseUrl
     });
     let store = new Store();
     turtleParser.parse(text).forEach(quad => {
@@ -6035,12 +6041,13 @@ async function tryParse(parser) {
 /**
  * Transforms input to quads
  * @param text - input data
+ * @param baseUrl
  * @returns {Promise<Store>}
  */
-async function inputToQuads(text) {
-    const jsonParser = async () => await parseJsonLd(text);
-    const rdfaParser = async () => await parseRdfa(text);
-    const microdataParser = async () => await parseMicrodata(text);
+async function inputToQuads(text, baseUrl) {
+    const jsonParser = async () => await parseJsonLd(text, baseUrl);
+    const rdfaParser = async () => await parseRdfa(text, baseUrl);
+    const microdataParser = async () => await parseMicrodata(text, baseUrl);
     let res = await tryParse(jsonParser) || await tryParse(microdataParser) || await tryParse(rdfaParser);
     if (!res || res.getQuads().length === 0) throw new errors.InvalidDataError("Error while parsing the data." +
         "This could be caused by incorrect data or incorrect data format. Possible formats: json-ld, microdata, rdfa");

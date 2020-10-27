@@ -95,11 +95,13 @@ function markupLevel(store, id, displayed, indentLevel, target = undefined) {
 /**
  * Base function that will can be called for pretty markup generation
  * @param {string} data - json-ld markup
- * @param {{type: 'entity'|'property', uri: string}|undefined} target - used for highlighting target entities/properties, e.g.
- *      startDate in the Event entity
+ * @param {{baseUrl?: string, target?: {type: 'entity'|'property', uri: string}}|undefined} options
+ *  - used for highlighting target entities/properties, e.g. startDate in the Event entity
  * @return {Promise<HTMLElement[]>}
  */
-async function prettyMarkupHtml(data, target = undefined) {
+async function prettyMarkupHtml(data, options = undefined) {
+    let baseUrl = options && options.baseUrl ? options.baseUrl : 'http://example.org';
+    let target = options && options.target ? options.target : undefined;
     try {
         JSON.parse(data);
     } catch (e) {
@@ -113,7 +115,7 @@ async function prettyMarkupHtml(data, target = undefined) {
         if (jsonld.length === 1) data = jsonld[0].innerText;
         else if (jsonld.length > 1) throw 'not single json-ld in the example';
     }
-    const shapes = schemarama.quadsToShapes(await schemarama.inputToQuads(data));
+    const shapes = schemarama.quadsToShapes(await schemarama.inputToQuads(data, baseUrl));
     const tripleRows = [];
     for (const [id, shape] of shapes.entries()) {
         tripleRows.push(...markupLevel(shape, id, [], 0, target));
@@ -123,7 +125,7 @@ async function prettyMarkupHtml(data, target = undefined) {
 
 /**
  * Hypothetical function that can be called every time we need to display the pretty markup
- * @param {string} data - jsonld markup
+ * @param {string} data - json-ld markup
  * @return {Promise<void>}
  */
 async function prettyMarkup(data) {
@@ -135,6 +137,7 @@ async function prettyMarkup(data) {
 }
 
 const data = `
+<script type="application/ld+json">
 {
   "@context":  "https://schema.org/",
   "@id": "#record",
@@ -156,6 +159,7 @@ const data = `
       "itemOffered": "#record"
     }
 }
+</script>
 `;
 prettyMarkup(data);
 
