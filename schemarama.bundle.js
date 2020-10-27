@@ -5960,7 +5960,7 @@ const errors = __webpack_require__(162);
 async function parseJsonLd(text, baseUrl) {
     let data = JSON.parse(text);
     data['@id'] = baseUrl;
-    const nquads = await jsonld.toRDF(data, { format: 'application/n-quads' });
+    const nquads = await jsonld.toRDF(data, { format: 'application/n-quads', base: baseUrl });
     return parseNQuads(nquads, baseUrl);
 }
 
