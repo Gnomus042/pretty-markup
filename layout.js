@@ -1,5 +1,7 @@
 const TYPE_URI = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type';
 const NAME_URI = 'http://schema.org/name';
+
+const defaultBase = 'http://example.org/'
 const indentStep = 30;
 
 /**
@@ -7,16 +9,16 @@ const indentStep = 30;
  * @return {string}
  */
 function replacePrefix(text) {
-    text = text.replaceAll(/https?:\/\/schema.org\//g, '');
-    text = text.replaceAll(/http:\/\/www.w3.org\/1999\/02\/22-rdf-syntax-ns#/g, '')
-    text = text.replaceAll(/http:\/\/www.w3.org\/2000\/01\/rdf-schema#/g, '');
+    text = text.split(/https?:\/\/schema.org\//g).join('');
+    text = text.split(/http:\/\/www.w3.org\/1999\/02\/22-rdf-syntax-ns#/g).join( '@');
+    text = text.split(/http:\/\/www.w3.org\/2000\/01\/rdf-schema#/g).join( '@');
     return text;
 }
 
 /**
  * Makes an html layout for a single triple
- * @param predicate
- * @param object
+ * @param {string} predicate
+ * @param {string} object
  * @param {{
  *     indentLevel: number,
  *     entityColorId: number,
@@ -33,15 +35,13 @@ function dataItemLayout(predicate, object, options) {
     const predicateEl = document.createElement('div');
     predicateEl.classList.add('predicate');
     const predicateTextEl = document.createElement('div');
-    predicateTextEl.innerText = replacePrefix(predicate.value);
+    predicateTextEl.innerText = replacePrefix(predicate);
     predicateEl.appendChild(indentBlock);
     predicateEl.appendChild(predicateTextEl);
 
     const objectEl = document.createElement('div');
     objectEl.classList.add('object');
-    objectEl.innerText = object.termType === 'NamedNode' ? replacePrefix(object.value) : object.value;
-    if (object.termType === 'BlankNode')
-        objectEl.style.display = 'none';
+    objectEl.innerText = object;
 
     const tripleRow = document.createElement('div');
     tripleRow.classList.add('triple-row');
@@ -67,8 +67,13 @@ function markupLevel(store, id, displayed, indentLevel, target = undefined) {
     displayed.push(id);
     let levelQuads = store.getQuads(id, undefined, undefined);
     const tripleRows = [];
-    // color identifier for current entity
-    const colorId = Math.random() * 360;
+
+    // options for dataItemLayout building
+    const layoutOptions = {
+        indentLevel: indentLevel,
+        entityColorId: Math.random() * 360,
+        isTarget: false,
+    }
 
     // important properties (type & name) go first
     const typeQuad = store.getQuads(id, TYPE_URI, undefined);
@@ -78,18 +83,49 @@ function markupLevel(store, id, displayed, indentLevel, target = undefined) {
     levelQuads.push(...typeQuad);
     levelQuads.reverse();
 
+    // adding @id (it's not in quads)
+    if (levelQuads.length > 0 && levelQuads[0].subject.termType === 'NamedNode') {
+        tripleRows.push(dataItemLayout('@id', id, layoutOptions));
+    }
+
     for (const quad of levelQuads) {
         // used for highlighting target triples
-        let isTarget = target && (target.type === 'entity' && typeQuad.length > 0 && typeQuad[0].object.value === target.uri ||
+        layoutOptions.isTarget = target && (target.type === 'entity' && typeQuad.length > 0 && typeQuad[0].object.value === target.uri ||
             target.type === 'property' && quad.predicate.value === target.uri);
-        tripleRows.push(dataItemLayout(quad.predicate, quad.object, {
-            indentLevel: indentLevel,
-            entityColorId: colorId,
-            isTarget: isTarget,
-        }));
-        tripleRows.push(...markupLevel(store, quad.object.id, displayed, indentLevel + 1, target));
+        if (store.getQuads(quad.object.id, undefined, undefined).length > 0){
+            tripleRows.push(dataItemLayout(quad.predicate.value, '', layoutOptions));
+            tripleRows.push(...markupLevel(store, quad.object.id, displayed, indentLevel + 1, target));
+        } else {
+            const object = quad.object.termType === 'NamedNode' ? replacePrefix(quad.object.value) :
+                quad.object.value;
+            tripleRows.push(dataItemLayout(quad.predicate.value, object, layoutOptions));
+        }
     }
     return tripleRows;
+}
+
+/**
+ * Get as close as possible base url that is still valid
+ * @param {string} data - input markup
+ * @return {string}
+ */
+function makeBaseUrl(data) {
+    let dataObj;
+    try {
+        dataObj = JSON.parse(data);
+    } catch (e) {
+        // return default if can't be parsed as JSON
+        return defaultBase;
+    }
+    if (dataObj.hasOwnProperty('@id')) {
+        // if has an @id and @id has a full url prefix (e.g. https://, etc.), return it
+        // else this is a relative url and we need to add the default base to it
+        if (dataObj['@id'].match(/.*?:\/\/.*/g))
+            return dataObj['@id'];
+        else
+            return defaultBase + dataObj['@id'];
+    }
+    return defaultBase;
 }
 
 /**
@@ -100,8 +136,6 @@ function markupLevel(store, id, displayed, indentLevel, target = undefined) {
  * @return {Promise<HTMLElement[]>}
  */
 async function prettyMarkupHtml(data, options = undefined) {
-    let baseUrl = options && options.baseUrl ? options.baseUrl : 'http://example.org';
-    let target = options && options.target ? options.target : undefined;
     try {
         JSON.parse(data);
     } catch (e) {
@@ -115,6 +149,9 @@ async function prettyMarkupHtml(data, options = undefined) {
         if (jsonld.length === 1) data = jsonld[0].innerText;
         else if (jsonld.length > 1) throw 'not single json-ld in the example';
     }
+    // passed baseUrl is prioritised, but if not given, a close to the markup baseUrl will be used
+    const baseUrl = options && options.baseUrl ? options.baseUrl : makeBaseUrl(data);
+    const target = options && options.target ? options.target : undefined;
     const shapes = schemarama.quadsToShapes(await schemarama.inputToQuads(data, baseUrl));
     const tripleRows = [];
     for (const [id, shape] of shapes.entries()) {
