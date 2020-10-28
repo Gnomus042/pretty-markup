@@ -15,6 +15,31 @@ function replacePrefix(text) {
     return text;
 }
 
+function shuffleArray(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        const temp = array[i];
+        array[i] = array[j];
+        array[j] = temp;
+    }
+}
+
+/**
+ * @param {Map<string, *>} shapes
+ * @return {number[]}
+ */
+function makeColorSet(shapes) {
+    let totalEntitiesCount = 0;
+    const colors = [];
+    for (const store of shapes.values()) {
+        totalEntitiesCount += new Set(store.getSubjects().map(x => x.id)).size;
+    }
+    for (let i = 0; i < totalEntitiesCount; i++)
+        colors.push(i/totalEntitiesCount*360);
+    shuffleArray(colors);
+    return colors;
+}
+
 /**
  * Makes an html layout for a single triple
  * @param {string} predicate
@@ -58,20 +83,24 @@ function dataItemLayout(predicate, object, options) {
  * @param {string} id - current node identifier
  * @param {string[]} displayed
  * @param {number} indentLevel - current indentation level
- * @param {{type: 'entity'|'property', uri: string}|undefined} target - used for highlighting target entities/properties, e.g.
- *      startDate in the Event entity
+ * @param {{
+ *  target?:{type: 'entity'|'property', uri: string}
+ *  colorSet?: number[]
+ *  }|undefined} options
  * @return {HTMLElement[]}
  */
-function markupLevel(store, id, displayed, indentLevel, target = undefined) {
+function markupLevel(store, id, displayed, indentLevel, options = undefined) {
     if (displayed.includes(id)) return []
     displayed.push(id);
+
     let levelQuads = store.getQuads(id, undefined, undefined);
+    if (levelQuads.length === 0) return [];
     const tripleRows = [];
 
     // options for dataItemLayout building
     const layoutOptions = {
         indentLevel: indentLevel,
-        entityColorId: Math.random() * 360,
+        entityColorId: options && options.colorSet? options.colorSet.pop() : Math.random() * 360,
         isTarget: false,
     }
 
@@ -90,11 +119,13 @@ function markupLevel(store, id, displayed, indentLevel, target = undefined) {
 
     for (const quad of levelQuads) {
         // used for highlighting target triples
-        layoutOptions.isTarget = target && (target.type === 'entity' && typeQuad.length > 0 && typeQuad[0].object.value === target.uri ||
-            target.type === 'property' && quad.predicate.value === target.uri);
-        if (store.getQuads(quad.object.id, undefined, undefined).length > 0){
+        layoutOptions.isTarget = options && options.target && (options.target.type === 'entity' &&
+            typeQuad.length > 0 && typeQuad[0].object.value === options.target.uri ||
+            options.target.type === 'property' && quad.predicate.value === options.target.uri);
+        const next_level = markupLevel(store, quad.object.id, displayed, indentLevel + 1, options);
+        if (next_level.length > 0){
             tripleRows.push(dataItemLayout(quad.predicate.value, '', layoutOptions));
-            tripleRows.push(...markupLevel(store, quad.object.id, displayed, indentLevel + 1, target));
+            tripleRows.push(...next_level);
         } else {
             const object = quad.object.termType === 'NamedNode' ? replacePrefix(quad.object.value) :
                 quad.object.value;
@@ -153,9 +184,10 @@ async function prettyMarkupHtml(data, options = undefined) {
     const baseUrl = options && options.baseUrl ? options.baseUrl : makeBaseUrl(data);
     const target = options && options.target ? options.target : undefined;
     const shapes = schemarama.quadsToShapes(await schemarama.inputToQuads(data, baseUrl));
+    const colorSet = makeColorSet(shapes);
     const tripleRows = [];
     for (const [id, shape] of shapes.entries()) {
-        tripleRows.push(...markupLevel(shape, id, [], 0, target));
+        tripleRows.push(...markupLevel(shape, id, [], 0, {colorSet: colorSet, target: target}));
     }
     return tripleRows;
 }
@@ -176,25 +208,67 @@ async function prettyMarkup(data) {
 const data = `
 <script type="application/ld+json">
 {
-  "@context":  "https://schema.org/",
-  "@id": "#record",
-  "@type": "Book",
-  "additionalType": "Product",
-  "name": "Le concerto",
-  "author": "Ferchault, Guy",
-  "offers":{
-      "@type": "Offer",
-      "availability": "https://schema.org/InStock",
-      "serialNumber": "CONC91000937",
-      "sku": "780 R2",
-      "offeredBy": {
-          "@type": "Library",
-          "@id": "http://library.anytown.gov.uk",
-          "name": "Anytown City Library"
-      },
-      "businessFunction": "http://purl.org/goodrelations/v1#LeaseOut",
-      "itemOffered": "#record"
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@id": "#author",
+      "@type": "Person",
+      "birthDate": "1892",
+      "deathDate": "1973",
+      "name": "Tolkien, J. R. R. (John Ronald Reuel)",
+      "sameAs": "http://viaf.org/viaf/95218067"
+    },
+    {
+      "@id": "#trilogy",
+      "@type": "Book",
+      "about": "http://id.worldcat.org/fast/1020337",
+      "hasPart": [
+        {
+          "@id": "#book3",
+          "@type": [
+            "Book",
+            "PublicationVolume"
+          ],
+          "name": "The Return of the King",
+          "about": "http://id.worldcat.org/fast/1020337",
+          "isPartOf": "#trilogy",
+          "inLanguage": "en",
+          "volumeNumber": "3",
+          "author": "#author"
+        },
+        {
+          "@id": "#book2",
+          "@type": [
+              "Book",
+              "PublicationVolume"
+          ],
+          "name": "The Two Towers",
+          "about": "http://id.worldcat.org/fast/1020337",
+          "isPartOf": "#trilogy",
+          "inLanguage": "en",
+          "volumeNumber": "2",
+          "author": "#author"
+        },
+        {
+          "@id": "#book1",
+          "@type": [
+            "Book",
+            "PublicationVolume"
+          ],
+          "name": "The Fellowship of the Ring",
+          "about": "http://id.worldcat.org/fast/1020337",
+          "isPartOf": "#trilogy",
+          "inLanguage": "en",
+          "volumeNumber": "1",
+          "author": "#author"
+        }
+      ],
+      "name": "Lord of the Rings",
+      "inLanguage": "en",
+      "genre": "fictional",
+      "author": "#author"
     }
+  ]
 }
 </script>
 `;
