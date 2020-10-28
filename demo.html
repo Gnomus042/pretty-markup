@@ -6,9 +6,12 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <h2>Html representation:</h2>
     <div id="pretty-markup">
 
     </div>
+    <h2>Textual representation:</h2>
+    <textarea style="width: 100%; height: 500px;" id="text-pretty-markup"></textarea>
     <script src="schemarama.bundle.js"></script>
     <script src="layout.js"></script>
     <script>
@@ -77,6 +80,16 @@
               ]
             }
             `;
+
+        async function prettyMarkup(data) {
+            const prettyMarkupTextarea = document.getElementById('text-pretty-markup');
+            prettyMarkupTextarea.value = await prettyMarkupText(data);
+            const prettyMarkupDiv = document.getElementById('pretty-markup');
+            let elements = await prettyMarkupHtml(data);
+            for (const el of elements) {
+                prettyMarkupDiv.appendChild(el);
+            }
+        }
         prettyMarkup(data);
     </script>
 </body>
