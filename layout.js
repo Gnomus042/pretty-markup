@@ -47,6 +47,7 @@ function makeColorSet(shapes) {
 
 /**
  * Makes a text layout for a single triple
+ * @param {string} subject
  * @param {string} predicate
  * @param {string} object
  * @param {{
@@ -56,23 +57,24 @@ function makeColorSet(shapes) {
  * }} options
  * @return {string}
  */
-function dataItemLayoutText(predicate, object, options) {
+function dataItemLayoutText(subject, predicate, object, options) {
     const indent = ' '.repeat(options.indentLevel * textIndentStep);
     return `${indent}${replacePrefix(predicate)}: ${replacePrefix(object)}`;
 }
 
 /**
  * Makes an html layout for a single triple
+ * @param {string} subject
  * @param {string} predicate
  * @param {string} object
  * @param {{
  *     indentLevel: number,
  *     entityColorId: number,
- *     isTarget: boolean
+ *     isTarget: boolean,
  * }} options
  * @return {*}
  */
-function dataItemLayoutHtml(predicate, object, options) {
+function dataItemLayoutHtml(subject, predicate, object, options) {
     const indentBlock = document.createElement('div');
     indentBlock.style.width = `${options.indentLevel * htmlIndentStep}px`;
     indentBlock.style.borderRight = `3px solid hsl(${options.entityColorId}, 60%, 70%)`;
@@ -94,7 +96,6 @@ function dataItemLayoutHtml(predicate, object, options) {
     tripleRow.style.background = options.isTarget ? '#f4f4f4' : '#fff';
     tripleRow.appendChild(predicateEl);
     tripleRow.appendChild(objectEl);
-
     return tripleRow;
 }
 
@@ -136,7 +137,7 @@ function markupLevel(store, id, displayed, indentLevel, layoutGenerator, options
 
     // adding @id (it's not in quads)
     if (levelQuads.length > 0 && levelQuads[0].subject.termType === 'NamedNode') {
-        tripleRows.push(layoutGenerator('@id', id, layoutOptions));
+        tripleRows.push(layoutGenerator(id, '@id', id, layoutOptions));
     }
 
     for (const quad of levelQuads) {
@@ -146,12 +147,12 @@ function markupLevel(store, id, displayed, indentLevel, layoutGenerator, options
             options.target.type === 'property' && quad.predicate.value === options.target.uri);
         const next_level = markupLevel(store, quad.object.id, displayed, indentLevel + 1, layoutGenerator, options);
         if (next_level.length > 0) {
-            tripleRows.push(layoutGenerator(quad.predicate.value, '', layoutOptions));
+            tripleRows.push(layoutGenerator(id, quad.predicate.value, '', layoutOptions));
             tripleRows.push(...next_level);
         } else {
             const object = quad.object.termType === 'NamedNode' ? replacePrefix(quad.object.value) :
                 quad.object.value;
-            tripleRows.push(layoutGenerator(quad.predicate.value, object, layoutOptions));
+            tripleRows.push(layoutGenerator(id, quad.predicate.value, object, layoutOptions));
         }
     }
     return tripleRows;
